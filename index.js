@@ -17,11 +17,24 @@ app.get('/', (req, res) => {
 	res.send('Running');
 });
 
+let socketIDList = []
+
 io.on("connection", (socket) => {
+	socketIDList.push(socket.id);
 	socket.emit("me", socket.id);
+	io.emit("playerList", socketIDList);
+
+	socket.on("criarChamada", ({ userToCall, signalData, from }) => {
+		io.to(userToCall).emit("criarChamada", { signal: signalData, from });
+	});
+
+	socket.on("responderChamada", ({ to, signal, from }) => {
+		io.to(to).emit("chamadaAceita", {signal, from})
+	});
 
 	socket.on("disconnect", () => {
-		socket.broadcast.emit("callEnded")
+		socketIDList = socketIDList.filter((s) => s !== socket.id);
+		socket.broadcast.emit("callEnded", { from: socket.id})
 	});
 
 	socket.on("callUser", ({ userToCall, signalData, from, name }) => {
